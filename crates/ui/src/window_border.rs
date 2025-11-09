@@ -23,14 +23,38 @@ pub fn window_border() -> WindowBorder {
 /// Window border use to render a custom window border and shadow for Linux.
 #[derive(IntoElement, Default)]
 pub struct WindowBorder {
+    is_shadow_enabled: bool,
+    is_resizable: bool,
     children: Vec<AnyElement>,
 }
 
 impl WindowBorder {
     pub fn new() -> Self {
         Self {
+            is_shadow_enabled: true,
+            is_resizable: true,
             ..Default::default()
         }
+    }
+
+    pub fn set_shadow(&mut self, enabled: bool) -> &mut Self {
+        self.is_shadow_enabled = enabled;
+        self
+    }
+
+    pub fn with_shadow(mut self, enabled: bool) -> Self {
+        self.is_shadow_enabled = enabled;
+        self
+    }
+
+    pub fn set_resizable(&mut self, resizable: bool) -> &mut Self {
+        self.is_resizable = resizable;
+        self
+    }
+
+    pub fn with_resizable(mut self, resizable: bool) -> Self {
+        self.is_resizable = resizable;
+        self
     }
 }
 
@@ -87,6 +111,9 @@ impl RenderOnce for WindowBorder {
                                 )
                             },
                             move |_bounds, hitbox, window, _| {
+                                if !self.is_resizable {
+                                    return;
+                                }
                                 let mouse = window.mouse_position();
                                 let size = window.window_bounds().get_bounds().size;
                                 let Some(edge) = resize_edge(mouse, SHADOW_SIZE, size) else {
@@ -125,6 +152,9 @@ impl RenderOnce for WindowBorder {
                     .when(!tiling.left, |div| div.pl(SHADOW_SIZE))
                     .when(!tiling.right, |div| div.pr(SHADOW_SIZE))
                     .on_mouse_down(MouseButton::Left, move |_, window, _| {
+                        if !self.is_resizable {
+                            return;
+                        }
                         let size = window.window_bounds().get_bounds().size;
                         let pos = window.mouse_position();
 
@@ -151,7 +181,7 @@ impl RenderOnce for WindowBorder {
                             .when(!tiling.bottom, |div| div.border_b(BORDER_SIZE))
                             .when(!tiling.left, |div| div.border_l(BORDER_SIZE))
                             .when(!tiling.right, |div| div.border_r(BORDER_SIZE))
-                            .when(!tiling.is_tiled(), |div| {
+                            .when(!tiling.is_tiled() && self.is_shadow_enabled, |div| {
                                 div.shadow(vec![gpui::BoxShadow {
                                     color: Hsla {
                                         h: 0.,
